@@ -1,25 +1,28 @@
 # OpenSSL로 사설 인증서 생성하기
 
-[설치환경](#설치-환경)
-[OpenSSL 설치](#openssl-설치)
-[서버 인증서 생성](#서버-인증서-생성)
-    - [개인키 생성](#1.-개인키-생성)
-    - [CSR생성](#2.-CSR(Certificate-Signing-Request)-생성)
-    - [CRT생성](#3.-CRT(Certificate)-생성)
-[인증서 변환](#인증서-변환)
+[설치환경](#설치-환경)  
+[OpenSSL 설치](#openssl-설치)  
+[서버 인증서 생성](#서버-인증서-생성)  
+        - [개인키 생성](#1.-개인키-생성)  
+        - [CSR생성](#2.-csr(certificate-signing-request)-생성)  
+        - [CRT생성](#3.-crt(certificate)-생성)  
+[인증서 변환](#인증서-변환)  
 [기타](#기타)
 
+<br>
 
 ## 설치 환경
-1. CentOS release 6.10(Final)
-2. OpenSSL 1.0.1e-fips 11 Feb 2013
++ CentOS release 6.10(Final)
++ OpenSSL 1.0.1e-fips 11 Feb 2013
 
+<br>
 
 ## OpeenSSL 설치
 1. yum install 명령어를 사용해서 openssl을 설치한다.
 ~~~
 # yum install -y openssl*
 ~~~
+
 2. 설치 후 openssl 버전을 확인한다.
 ~~~
 # rpm -qa openssl
@@ -29,6 +32,7 @@ or
 # openssl version
 ~~~
 
+<br>
 
 ## 서버 인증서 생성
 ### 1. 개인키 생성
@@ -38,6 +42,8 @@ or
 ~~~
 ex) openssl genrsa -out private.pem 2048
 
+<br>
+
 Generating RSA private key, 2048 bit long modulus  
 ...........................................................+++  
 ..............................................................  .............................................................+++  
@@ -45,13 +51,16 @@ e is 65537 (0x10001)
 
 
 ### 2. CSR(Certificate Signing Request) 생성
-> CSR?
+> CSR란?  
 > SSL 인증 정보를 암호화하여 인증기관으로 부터 인증서를 발급받기 위한 신청서이다.
 다음 명령어를 입력하여 CSR을 생성한다.
+
 ~~~
 # openssl req -new -key {private key name} -out {csr file name}.csr [-config {cert config file}]
 ~~~
 ex) openssl req -new -key private.pem -out private.csr
+
+<br>
 
 |구분|내용|예|
 |---|---|---|
@@ -63,7 +72,11 @@ ex) openssl req -new -key private.pem -out private.csr
 |Common Name|SSL인증서를 설치할 서버의 도메인|www.test.com|
 |Email Address|이메일 주소|test@test.com|
 
+<br>
+
 __Common Name 에는 도메인의 이름만 넣어야 한다.(IP 주소, 포트번호, 경로명, http:// 나 https:// 포함불가능)__
+
+<br>
 
 You are about to be asked to enter information that will be incorporated  
 into your certificate request.  
@@ -85,14 +98,17 @@ to be sent with your certificate request
 A challenge password []:test  
 An optional company name []:test  
 
+<br>
 
 ### 3. CRT(Certificate) 생성
 #### 사설 CA에서 인증받은 인증서 생성
-###### 3-1. rootCA.key 생성하기
+##### 3-1. rootCA.key 생성하기
 ~~~
 # openssl genrsa -{Encryption Algorithm} -out {rootCA key name}.key 2048
 ~~~
 ex) openssl genrsa -aes256 -out rootCA.key 2048
+
+<br>
 
 Generating RSA private key, 2048 bit long modulus  
 .+++  
@@ -101,11 +117,14 @@ e is 65537 (0x10001)
 Enter pass phrase for rootCA.key:  
 Verifying - Enter pass phrase for rootCA.key:  
 
-###### 3-2. rootCA 사설 CSR 생성하기
+
+##### 3-2. rootCA 사설 CSR 생성하기
 ~~~
 # openssl req -x509 -new -nodes -key {rootCA key name}.key -days {period} -out {rootCA CSR name}.pem [-config{cert config file}]
 ~~~
 ex) openssl req -x509 -new -nodes -key rootCA.key -days 3650 -out rootCA.pem
+
+<br>
 
 Enter pass phrase for rootCA.key:  
 You are about to be asked to enter information that will be incorporated  
@@ -123,17 +142,22 @@ Organizational Unit Name (eg, section) []:Test
 Common Name (eg, your name or your server's hostname) []:www.test.com  
 Email Address []:test@test.com  
 
-###### 3-3. CRT 생성하기
+
+##### 3-3. CRT 생성하기
 : [2. CSR생성](#2.-CSR(Certificate-Signing-Request)-생성) 에서 만든 csr을 rootCA인증을 받아 cert.cst로 생성한다.
 ~~~
 # openssl x509 -req -in {private csr name}.csr -CA {rootCA csr name}.pem -CAkey {rootCA key}.key -CAcreateserial -out {cert name}.crt -days {period} [-config {cert config file}]
 ~~~
 ex) openssl x509 -req -in private.csr -CA rootCA.pem -CAkey rootCA.key -CAcreateserial -out cert.crt -days 3650
 
+<br>
+
 Signature ok  
 subject=/C=KR/ST=Seoul/L=Mapo-gu/O=Test/OU=Test/CN=www.test.com/emailAddress=test@test.com  
 Getting CA Private Key  
 Enter pass phrase for rootCA.key:  
+
+<br>
 
 #### 단순히 개인키로 인증서 생성
 ~~~
@@ -141,6 +165,7 @@ Enter pass phrase for rootCA.key:
 ~~~
 ex) openssl req -x509 -days 3650 -key private.pem -in private.csr -out cert.crt -days 3650
 
+<br>
 
 ## 인증서 변환
 ### pkcs12 생성
@@ -161,7 +186,11 @@ keytool -importkeystore -srckeystore {p12 file} -srcstoretype PKCS12 -destkeysto
 ~~~
 ex) keytool -importkeystore -srckeystore private.p12 -srcstoretype PKCS12 -destkeystore abc.jks -deststoretype JKS  
 
+<br>
+
 __keytool을 사용하기 위해서는 java가 설치되어 있어야 한다.__
+
+<br>
 
 키 저장소 private.p12을(를) abc.jks(으)로 임포트하는 중...  
 대상 키 저장소 비밀번호 입력: (jks에 사용할 비밀번호)  
@@ -175,6 +204,8 @@ __keytool을 사용하기 위해서는 java가 설치되어 있어야 한다.__
 openssl x509 -in {crt file} -out {converted file name}.pem -outform PEM
 ~~~
 ex) openssl x509 -in cert.crt -out cert.pem -outform PEM
+
+<br>
 
 ## 기타
 ### 인증서 내용 보기
